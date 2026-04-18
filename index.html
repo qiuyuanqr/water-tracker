@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="喝水">
+    <meta name="theme-color" content="#0A84FF">
+    <meta name="format-detection" content="telephone=no">
+    <title>饮水记录</title>
+    <style>
+    /* ===== Base ===== */
+    * {
+        box-sizing: border-box; margin: 0; padding: 0;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none; user-select: none;
+    }
+    input, textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+    html, body { height: 100%; overscroll-behavior-y: contain; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(180deg, #DCEEFB 0%, #EBF5FE 35%, #F5FAFF 70%, #FFFFFF 100%);
+        color: #1C1C1E;
+        min-height: 100vh;
+        overflow-x: hidden;
+        padding:
+            calc(env(safe-area-inset-top, 0px) + 10px)
+            env(safe-area-inset-right, 0px)
+            calc(env(safe-area-inset-bottom, 0px) + 8px)
+            env(safe-area-inset-left, 0px);
+        -webkit-font-smoothing: antialiased;
+        position: relative;
+    }
+
+    /* ===== Decorative bubbles ===== */
+    .bg-decor { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .bubble {
+        position: absolute; border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(90,200,250,0.3) 55%, rgba(10,132,255,0.06) 100%);
+        filter: blur(6px); animation: floaty 12s ease-in-out infinite; opacity: 0.5;
+    }
+    .bubble.b1 { width: 200px; height: 200px; top: -70px; right: -60px; }
+    .bubble.b2 { width: 130px; height: 130px; top: 35%; left: -50px; animation-delay: 2s; }
+    .bubble.b3 { width: 100px; height: 100px; bottom: 18%; right: -30px; animation-delay: 4s; }
+    .bubble.b4 { width: 70px;  height: 70px;  bottom: 5%;  left: 20%;   animation-delay: 6s; }
+    @keyframes floaty {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-16px) scale(1.05); }
+    }
+
+    .app-container { max-width: 520px; margin: 0 auto; padding: 0 14px; position: relative; z-index: 1; }
+
+    /* ===== Header ===== */
+    .app-header { text-align: center; padding: 4px 4px 12px; }
+    .main-title {
+        font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px;
+        background: linear-gradient(135deg, #0A84FF 0%, #32ADE6 55%, #5AC8FA 100%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .subtitle { margin-top: 6px; font-size: 12px; color: #8E8E93; font-weight: 600; letter-spacing: 0.3px; }
+
+    /* ===== Section common ===== */
+    .section {
+        background: rgba(255,255,255,0.78);
+        backdrop-filter: blur(20px) saturate(160%);
+        -webkit-backdrop-filter: blur(20px) saturate(160%);
+        border-radius: 20px;
+        padding: 12px 14px 14px;
+        margin-bottom: 10px;
+        box-shadow: 0 6px 16px rgba(10,132,255,0.08), 0 1px 3px rgba(0,0,0,0.04);
+        border: 1px solid rgba(255,255,255,0.9);
+    }
+    .section-title {
+        font-size: 13px; font-weight: 700; color: #3A3A3C; margin-bottom: 8px;
+        letter-spacing: 0.2px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .section-hint { font-size: 10.5px; font-weight: 500; color: #A8A8AE; }
+
+    /* ===== Bottle progress ===== */
+    .cylinder-container { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 2px 0; }
+    .bottle { position: relative; width: 116px; height: 206px; display: flex; flex-direction: column; align-items: center; }
+    .bottle-cap {
+        width: 42px; height: 12px;
+        background: linear-gradient(180deg, #E6EEF7 0%, #C2D2E5 100%);
+        border-radius: 6px 6px 3px 3px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 3px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.08);
+        border: 1px solid rgba(0,0,0,0.06);
+        z-index: 4; margin-bottom: -2px;
+    }
+    .bottle-glass {
+        position: relative; width: 116px; height: 196px;
+        border-radius: 36px 36px 26px 26px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.75) 0%, rgba(235,245,255,0.55) 40%, rgba(220,235,250,0.45) 100%);
+        border: 2px solid rgba(10,132,255,0.15);
+        box-shadow:
+            inset 3px 0 6px rgba(255,255,255,0.7),
+            inset -4px 0 10px rgba(10,132,255,0.06),
+            inset 0 -4px 10px rgba(0,0,0,0.06),
+            inset 0 4px 8px rgba(255,255,255,0.5),
+            0 12px 24px rgba(10,132,255,0.18),
+            0 4px 8px rgba(10,132,255,0.08);
+        overflow: hidden;
+    }
+    .bottle-fill {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 0%;
+        background: linear-gradient(180deg, #FFC06B 0%, #FF9500 100%);
+        transition: height 0.7s cubic-bezier(.2,.9,.2,1), background 0.4s ease;
+        box-shadow: inset 0 2px 6px rgba(255,255,255,0.35);
+    }
+    .bottle-fill.level-normal { background: linear-gradient(180deg, #6FD1FB 0%, #0A84FF 100%); }
+    .bottle-fill.level-healthy { background: linear-gradient(180deg, #8FE6A2 0%, #34C759 100%); }
+
+    .wave-svg {
+        position: absolute; left: -25%; width: 150%; height: 12px;
+        animation: waveSlide 4s linear infinite;
+    }
+    .wave-svg path { fill: rgba(255,255,255,0.5); }
+    .wave-svg-back { top: -5px; animation-duration: 5.5s; animation-direction: reverse; opacity: 0.55; }
+    .wave-svg-back path { fill: rgba(255,255,255,0.35); }
+    .wave-svg-front { top: -7px; }
+    @keyframes waveSlide {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(33.3%); }
+    }
+
+    .bottle-bubbles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+    .bb {
+        position: absolute; bottom: 4%; border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.85), rgba(255,255,255,0.2));
+        opacity: 0; animation: bubbleUp 4.5s ease-in infinite;
+    }
+    .bb.b1 { left: 28%; width: 7px; height: 7px; }
+    .bb.b2 { left: 58%; width: 4px; height: 4px; animation-delay: 1.2s; animation-duration: 5.2s; }
+    .bb.b3 { left: 72%; width: 9px; height: 9px; animation-delay: 2.4s; animation-duration: 5.8s; }
+    @keyframes bubbleUp {
+        0%   { transform: translateY(0) scale(0.6); opacity: 0; }
+        15%  { opacity: 0.7; }
+        80%  { opacity: 0.5; }
+        100% { transform: translateY(-160px) scale(1.1); opacity: 0; }
+    }
+
+    .bottle-shine {
+        position: absolute; left: 12px; top: 14px; width: 9px; height: 55%;
+        background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.25) 60%, rgba(255,255,255,0) 100%);
+        border-radius: 50%; filter: blur(1.5px); z-index: 2; pointer-events: none;
+    }
+    .bottle-glass::after {
+        content: ''; position: absolute; right: 10px; top: 20%; width: 4px; height: 20%;
+        background: linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0));
+        border-radius: 50%; filter: blur(1px); pointer-events: none;
+    }
+
+    .bottle-emoji {
+        position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%);
+        font-size: 38px; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.22));
+        z-index: 3; animation: bob 3s ease-in-out infinite;
+    }
+    @keyframes bob {
+        0%, 100% { transform: translate(-50%, -50%); }
+        50% { transform: translate(-50%, -44%); }
+    }
+    .bottle-text {
+        position: absolute; left: 0; right: 0; bottom: 14px;
+        text-align: center; z-index: 3; color: #FFFFFF;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 0 12px rgba(0,0,0,0.15);
+        font-weight: 800; padding: 0 6px;
+    }
+    .current-ml { font-size: 22px; letter-spacing: -0.3px; }
+    .target-ml { font-size: 10px; font-weight: 700; opacity: 0.92; display: block; margin-top: 1px; letter-spacing: 0.2px; }
+
+    /* Ticks sit outside the glass (siblings, not children) so labels aren't clipped
+       by overflow:hidden. Positions are px from bottle bottom, matching water levels
+       (glass is 196px tall, filling 0–100% from bottom). */
+    .bottle-tick {
+        position: absolute; right: -2px;
+        display: flex; align-items: center; gap: 3px;
+        z-index: 5; pointer-events: none;
+    }
+    .bottle-tick i {
+        width: 9px; height: 2px; border-radius: 2px; display: block;
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.6);
+    }
+    .bottle-tick b {
+        font-size: 8.5px; font-weight: 800; letter-spacing: 0.2px;
+        background: rgba(255,255,255,0.85);
+        padding: 1px 3px; border-radius: 4px;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+    }
+    /* Water levels: glass is 196px tall, water fills from bottom.
+       1200ml = 60% = 118px | 1600ml = 80% = 157px | 2000ml = 100% = ~188px (just below top curve) */
+    .bottle-tick.t-2000 { bottom: 182px; }
+    .bottle-tick.t-1600 { bottom: 157px; }
+    .bottle-tick.t-1200 { bottom: 118px; }
+    .bottle-tick.t-2000 i { background: #34C759; }
+    .bottle-tick.t-2000 b { color: #1F8F42; }
+    .bottle-tick.t-1600 i { background: #0A84FF; }
+    .bottle-tick.t-1600 b { color: #0A5FCC; }
+    .bottle-tick.t-1200 i { background: #FF9500; }
+    .bottle-tick.t-1200 b { color: #B96600; }
+
+    .level-indicators { display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: #3A3A3C; }
+    .level-item {
+        display: flex; align-items: center; gap: 7px; font-weight: 600;
+        padding: 5px 9px 5px 7px; border-radius: 9px;
+        background: transparent; transition: background 0.3s ease;
+    }
+    .level-item.active {
+        background: linear-gradient(135deg, rgba(10,132,255,0.08), rgba(90,200,250,0.04));
+        box-shadow: inset 0 0 0 1px rgba(10,132,255,0.1);
+    }
+    .level-dot {
+        width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0;
+        box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
+    }
+    .level-dot.orange { background: #FF9500; }
+    .level-dot.blue { background: #0A84FF; }
+    .level-dot.green { background: #34C759; }
+    .level-text { display: flex; flex-direction: column; line-height: 1.15; gap: 2px; }
+    .level-text .lt-line {
+        display: inline-flex; align-items: center; gap: 3px;
+        font-size: 12.5px; font-weight: 600; color: #3A3A3C;
+        white-space: nowrap;
+    }
+    .level-text .lt-line b { font-weight: 700; }
+    .level-text .lt-emoji { font-size: 12px; line-height: 1; }
+    .level-text small { font-size: 9.5px; color: #8E8E93; font-weight: 600; }
+
+    /* ===== Cups ===== */
+    .cups-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .cup-card {
+        display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+        padding: 9px 4px 8px;
+        background: linear-gradient(180deg, #FFFFFF, #F3F9FF);
+        border-radius: 14px;
+        border: 1.5px solid rgba(10,132,255,0.08);
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.2s ease;
+        position: relative; overflow: hidden;
+    }
+    .cup-card:active { transform: scale(0.94); background: #E4EFFC; }
+    .cup-card.pulse { animation: pulse 0.55s ease; }
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        35% { transform: scale(1.1); background: #CDE5FD; box-shadow: 0 0 0 6px rgba(10,132,255,0.12); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(10,132,255,0); }
+    }
+    .cup-icon { position: relative; width: 36px; height: 46px; margin-bottom: 6px; }
+    .cup-body {
+        width: 100%; height: 100%;
+        background: linear-gradient(180deg, rgba(225,240,252,0.4), rgba(200,225,245,0.7));
+        border: 2px solid #0A84FF;
+        border-top: 2px solid rgba(10,132,255,0.3);
+        border-radius: 3px 3px 12px 12px;
+        position: relative; overflow: hidden;
+    }
+    .cup-water {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        background: linear-gradient(180deg, #5AC8FA 0%, #0A84FF 100%);
+        transition: height 0.3s ease;
+    }
+    .cup-water::before {
+        content: ''; position: absolute; top: -3px; left: 0; right: 0; height: 6px;
+        background: rgba(255,255,255,0.45); border-radius: 50%;
+    }
+    .cup-handle {
+        position: absolute; top: 12px; right: -7px; width: 10px; height: 18px;
+        border: 2px solid #0A84FF; border-left: 0; border-radius: 0 8px 8px 0;
+    }
+    .cup-body.custom {
+        display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(180deg, #FFF3E0, #FFE1AE);
+        border-color: #FF9500;
+    }
+    .custom-cup .cup-handle { border-color: #FF9500; }
+    .question-mark { font-size: 22px; font-weight: 800; color: #FF9500; line-height: 1; }
+    .cup-label { font-size: 11.5px; font-weight: 700; color: #3A3A3C; letter-spacing: 0.2px; }
+
+    /* ===== Today records list ===== */
+    .today-records {
+        margin-top: 10px; padding-top: 9px;
+        border-top: 1px dashed rgba(10,132,255,0.15);
+    }
+    .today-records-header {
+        display: flex; justify-content: space-between; align-items: baseline;
+        font-size: 12px; font-weight: 700; color: #3A3A3C; margin-bottom: 6px;
+    }
+    .today-records-count { font-size: 10.5px; color: #8E8E93; font-weight: 600; }
+    .today-records-list {
+        display: flex; flex-wrap: wrap; gap: 5px;
+        align-content: flex-start;
+        height: 92px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 2px;
+    }
+    .today-records-list::-webkit-scrollbar { width: 4px; }
+    .today-records-list::-webkit-scrollbar-thumb { background: rgba(10,132,255,0.25); border-radius: 4px; }
+    .today-records-list::-webkit-scrollbar-track { background: transparent; }
+
+    .record-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        background: linear-gradient(135deg, #EEF5FD, #E2EEFB);
+        border: 1px solid rgba(10,132,255,0.15);
+        color: #0A84FF;
+        padding: 5px 5px 5px 9px;
+        border-radius: 999px;
+        font-size: 11.5px; font-weight: 700;
+        animation: chipIn 0.25s ease;
+    }
+    @keyframes chipIn { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+    .record-chip .chip-time { color: #8E8E93; font-weight: 600; font-size: 10px; margin-right: 1px; }
+    .record-chip .chip-del {
+        width: 16px; height: 16px; border-radius: 50%;
+        background: rgba(255,59,48,0.12); color: #FF3B30;
+        border: 0; cursor: pointer; font-size: 12px; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .record-chip .chip-del:active { background: rgba(255,59,48,0.22); }
+    .empty-records { color: #A8A8AE; font-size: 12px; font-weight: 500; padding: 4px 4px; }
+
+    /* ===== Calendar bar ===== */
+    .calendar-section { padding: 0; background: transparent; box-shadow: none; border: 0; backdrop-filter: none; margin-bottom: 4px; }
+    .calendar-bar {
+        display: flex; align-items: center; gap: 10px;
+        padding: 11px 16px;
+        background: linear-gradient(135deg, #0A84FF 0%, #5AC8FA 100%);
+        border-radius: 999px; color: #FFFFFF; cursor: pointer;
+        box-shadow: 0 8px 18px rgba(10,132,255,0.32);
+        transition: transform 0.18s ease;
+    }
+    .calendar-bar:active { transform: scale(0.97); }
+    .calendar-bar-icon {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center;
+        font-size: 16px;
+    }
+    .calendar-bar-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .calendar-bar-title { font-size: 14px; font-weight: 700; }
+    .calendar-bar-sub {
+        font-size: 11px; opacity: 0.9; margin-top: 1px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .calendar-bar-arrow { opacity: 0.9; flex-shrink: 0; }
+
+    /* ===== Modal ===== */
+    .modal-overlay {
+        position: fixed; inset: 0; background: rgba(20,30,50,0.45);
+        display: none; align-items: flex-end; justify-content: center;
+        z-index: 100;
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        animation: overlayIn 0.22s ease;
+    }
+    .modal-overlay.show { display: flex; }
+    @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal {
+        background: #FFFFFF;
+        border-radius: 24px 24px 0 0;
+        width: 100%; max-width: 520px;
+        overflow: hidden;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.22);
+        animation: sheetIn 0.3s cubic-bezier(.2,.8,.2,1);
+        max-height: 90vh;
+        display: flex; flex-direction: column;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    @keyframes sheetIn {
+        from { opacity: 0; transform: translateY(30px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    @media (min-width: 560px) {
+        .modal-overlay { align-items: center; padding: 20px; }
+        .modal { border-radius: 22px; max-width: 440px; }
+    }
+
+    .modal-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 20px 12px; flex-shrink: 0;
+    }
+    .modal-header h3 { font-size: 17px; font-weight: 700; }
+    .modal-close {
+        width: 30px; height: 30px; border: 0; background: #F2F2F7; border-radius: 50%;
+        font-size: 20px; color: #8E8E93; cursor: pointer; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .modal-body { padding: 6px 20px 18px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .modal-footer {
+        display: flex; gap: 10px; padding: 12px 20px 18px;
+        border-top: 1px solid #F2F2F7; flex-shrink: 0;
+    }
+    .btn {
+        flex: 1; padding: 13px 16px; border: 0; border-radius: 14px;
+        font-size: 15px; font-weight: 700; cursor: pointer;
+        transition: transform 0.15s ease;
+    }
+    .btn-cancel { background: #F2F2F7; color: #3A3A3C; }
+    .btn-cancel:active { background: #E5E5EA; }
+    .btn-confirm {
+        background: linear-gradient(135deg, #0A84FF, #32ADE6); color: white;
+        box-shadow: 0 6px 14px rgba(10,132,255,0.3);
+    }
+    .btn-confirm:active { transform: scale(0.97); }
+
+    .custom-input-group {
+        display: flex; align-items: center;
+        background: #F7FAFD; border-radius: 14px;
+        padding: 4px 14px 4px 16px; border: 1.5px solid #E5EEF7;
+    }
+    .custom-amount-input {
+        flex: 1; border: 0; outline: none; background: transparent;
+        font-size: 22px; font-weight: 700; padding: 14px 0; color: #1C1C1E;
+        -moz-appearance: textfield; min-width: 0;
+    }
+    .custom-amount-input::-webkit-outer-spin-button,
+    .custom-amount-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .custom-unit { font-size: 15px; color: #8E8E93; font-weight: 700; }
+    .quick-amounts {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+        margin-top: 14px;
+    }
+    .quick-btn {
+        padding: 11px 4px; border: 1.5px solid #E5EEF7; background: #FFFFFF;
+        border-radius: 11px; font-size: 13px; font-weight: 700; color: #3A3A3C;
+        cursor: pointer; transition: transform 0.15s ease;
+    }
+    .quick-btn:active { transform: scale(0.94); }
+    .quick-btn.active {
+        background: #0A84FF; border-color: #0A84FF; color: #FFFFFF;
+        box-shadow: 0 4px 10px rgba(10,132,255,0.3);
+    }
+
+    /* ===== Calendar modal ===== */
+    .calendar-modal { max-width: 460px; }
+    .calendar-nav { display: flex; align-items: center; justify-content: space-between; padding: 4px 20px 10px; }
+    .cal-nav-btn {
+        width: 32px; height: 32px; border: 0; background: #F2F2F7; border-radius: 50%;
+        color: #3A3A3C; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .cal-nav-btn:active { background: #E5E5EA; transform: scale(0.92); }
+    .cal-nav-title { font-size: 16px; font-weight: 700; color: #1C1C1E; }
+    .calendar-weekdays {
+        display: grid; grid-template-columns: repeat(7, 1fr);
+        padding: 4px 12px 6px; font-size: 11.5px; font-weight: 700; color: #8E8E93; text-align: center;
+    }
+    .calendar-grid {
+        display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+        padding: 0 12px 12px;
+    }
+    .cal-day {
+        aspect-ratio: 1 / 1;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        border-radius: 10px; font-size: 13px; font-weight: 600; color: #3A3A3C;
+        background: #F4F6FA;
+        position: relative; cursor: pointer;
+        transition: transform 0.15s ease;
+        border: 1.5px solid transparent;
+    }
+    .cal-day:active { transform: scale(0.94); }
+    .cal-day.empty { background: transparent; cursor: default; pointer-events: none; }
+    .cal-day .day-num { font-size: 14px; font-weight: 700; }
+    .cal-day .day-sep {
+        width: 55%; height: 2px; border-radius: 2px;
+        background: rgba(0,0,0,0.1); margin: 2px 0;
+    }
+    .cal-day .day-ml { font-size: 10px; font-weight: 700; opacity: 0.9; margin-top: 1px; }
+    .cal-day.today { border-color: #0A84FF; box-shadow: 0 0 0 2px rgba(10,132,255,0.15); }
+    .cal-day.level-survival { background: #FFEFD9; color: #8C4E00; }
+    .cal-day.level-survival .day-sep { background: #FF9500; }
+    .cal-day.level-normal { background: #D6ECFB; color: #004A99; }
+    .cal-day.level-normal .day-sep { background: #0A84FF; }
+    .cal-day.level-healthy { background: #D8F3DD; color: #18612F; }
+    .cal-day.level-healthy .day-sep { background: #34C759; }
+
+    .calendar-legend {
+        display: flex; justify-content: space-around; flex-wrap: wrap; gap: 6px;
+        padding: 10px 14px 18px; font-size: 11.5px; color: #3A3A3C;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-weight: 600; }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+    /* ===== Day modal ===== */
+    .day-modal { max-width: 460px; }
+    .day-summary { display: flex; align-items: center; gap: 14px; padding: 10px 20px 12px; }
+    .day-summary-left {
+        width: 60px; height: 60px; border-radius: 18px;
+        background: linear-gradient(135deg, #E8F4FD, #D3E7FA);
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .day-summary-emoji { font-size: 36px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+    .day-summary-right { flex: 1; min-width: 0; }
+    .day-summary-ml { font-size: 24px; font-weight: 800; color: #1C1C1E; line-height: 1; }
+    .day-summary-ml small { font-size: 12px; font-weight: 600; color: #8E8E93; margin-left: 4px; }
+    .day-summary-level { font-size: 12px; font-weight: 600; color: #8E8E93; margin-top: 4px; }
+    .day-progress-bar {
+        margin-top: 8px; height: 8px; border-radius: 999px; background: #F2F2F7; overflow: hidden;
+    }
+    .day-progress-fill {
+        height: 100%; width: 0%;
+        background: linear-gradient(90deg, #FFB84D, #FF9500);
+        border-radius: 999px;
+        transition: width 0.5s cubic-bezier(.2,.8,.2,1), background 0.3s ease;
+    }
+    .day-progress-fill.level-normal { background: linear-gradient(90deg, #5AC8FA, #0A84FF); }
+    .day-progress-fill.level-healthy { background: linear-gradient(90deg, #7FE08F, #34C759); }
+
+    .day-quick-add { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px 20px 14px; }
+    .day-add-btn {
+        padding: 12px 4px; border: 1.5px solid #E5EEF7;
+        background: linear-gradient(180deg, #FFFFFF, #F3F9FF);
+        border-radius: 12px; font-size: 13px; font-weight: 700; color: #0A84FF;
+        cursor: pointer; transition: transform 0.15s ease;
+    }
+    .day-add-btn:active { transform: scale(0.94); background: #E4EFFC; }
+    .day-add-btn.custom {
+        background: linear-gradient(180deg, #FFF8E8, #FFE9C2);
+        color: #FF9500; border-color: rgba(255,149,0,0.25);
+    }
+
+    .day-records-title {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 4px 20px 8px;
+        font-size: 13px; font-weight: 700; color: #3A3A3C;
+        border-top: 1px solid #F2F2F7; margin-top: 4px; padding-top: 12px;
+    }
+    .day-records-count { font-size: 11px; color: #8E8E93; font-weight: 600; }
+    .day-records-list {
+        padding: 0 20px 18px; overflow-y: auto;
+        max-height: 240px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .day-record-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 12px; margin-bottom: 6px;
+        background: #F7FAFD; border-radius: 12px;
+        animation: chipIn 0.2s ease;
+    }
+    .day-record-row .rec-icon {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: linear-gradient(135deg, #0A84FF, #5AC8FA);
+        color: white; display: flex; align-items: center; justify-content: center;
+        font-size: 14px; flex-shrink: 0;
+        box-shadow: 0 3px 8px rgba(10,132,255,0.3);
+    }
+    .day-record-row .rec-main { flex: 1; display: flex; flex-direction: column; }
+    .day-record-row .rec-ml { font-size: 15px; font-weight: 800; color: #1C1C1E; }
+    .day-record-row .rec-time { font-size: 11px; font-weight: 600; color: #8E8E93; margin-top: 1px; }
+    .day-record-row .rec-del {
+        width: 30px; height: 30px; border-radius: 50%;
+        background: rgba(255,59,48,0.1); color: #FF3B30;
+        border: 0; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.15s ease, transform 0.15s ease;
+    }
+    .day-record-row .rec-del:active { background: rgba(255,59,48,0.2); transform: scale(0.9); }
+    .day-records-list .empty-records { padding: 20px 0; text-align: center; }
+
+    /* ===== Toast ===== */
+    .toast {
+        position: fixed;
+        left: 50%;
+        top: calc(env(safe-area-inset-top, 0px) + 20px);
+        transform: translateX(-50%) translateY(-30px);
+        background: rgba(28,28,30,0.94); color: #FFFFFF;
+        padding: 10px 18px; border-radius: 999px;
+        font-size: 13px; font-weight: 600;
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+        z-index: 200;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+        white-space: nowrap;
+        max-width: 90vw; overflow: hidden; text-overflow: ellipsis;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ===== Small screens ===== */
+    @media (max-height: 700px) {
+        .main-title { font-size: 26px; }
+        .app-header { padding: 2px 4px 8px; }
+        .bottle { width: 108px; height: 190px; }
+        .bottle-glass { width: 108px; height: 180px; }
+        .bottle-emoji { font-size: 34px; }
+        .current-ml { font-size: 20px; }
+        .section { padding: 10px 12px 12px; margin-bottom: 8px; }
+        .today-records-list { height: 82px; }
+        /* Scaled tick positions for smaller bottle (glass 180px):
+           1200=108 | 1600=144 | 2000≈167 */
+        .bottle-tick.t-2000 { bottom: 167px; }
+        .bottle-tick.t-1600 { bottom: 144px; }
+        .bottle-tick.t-1200 { bottom: 108px; }
+    }
+    @media (max-width: 380px) {
+        .cup-icon { width: 32px; height: 42px; }
+        .cups-grid { gap: 6px; }
+    }
+    </style>
+</head>
+<body>
+    <div class="bg-decor">
+        <span class="bubble b1"></span>
+        <span class="bubble b2"></span>
+        <span class="bubble b3"></span>
+        <span class="bubble b4"></span>
+    </div>
+
+    <div class="app-container">
+        <header class="app-header">
+            <h1 class="main-title">今天你好好喝水了吗?</h1>
+            <p class="subtitle" id="dateDisplay"></p>
+        </header>
+
+        <!-- Section 1: Progress bottle -->
+        <section class="section progress-section">
+            <h2 class="section-title">今日进度</h2>
+            <div class="cylinder-container">
+                <div class="bottle">
+                    <div class="bottle-cap"></div>
+                    <div class="bottle-glass">
+                        <div class="bottle-fill" id="cylinderFill">
+                            <svg class="wave-svg wave-svg-back" viewBox="0 0 200 16" preserveAspectRatio="none">
+                                <path d="M0,10 Q25,2 50,10 T100,10 T150,10 T200,10 V16 H0 Z"/>
+                            </svg>
+                            <svg class="wave-svg wave-svg-front" viewBox="0 0 200 16" preserveAspectRatio="none">
+                                <path d="M0,8 Q25,0 50,8 T100,8 T150,8 T200,8 V16 H0 Z"/>
+                            </svg>
+                        </div>
+                        <div class="bottle-bubbles">
+                            <span class="bb b1"></span><span class="bb b2"></span><span class="bb b3"></span>
+                        </div>
+                        <div class="bottle-shine"></div>
+                        <div class="bottle-emoji" id="cylinderEmoji">😩</div>
+                        <div class="bottle-text">
+                            <span class="current-ml" id="currentMl">0</span>
+                            <span class="target-ml">/ <span id="targetMl">2000</span> ml</span>
+                        </div>
+                    </div>
+                    <span class="bottle-tick t-2000"><i></i><b>2000</b></span>
+                    <span class="bottle-tick t-1600"><i></i><b>1600</b></span>
+                    <span class="bottle-tick t-1200"><i></i><b>1200</b></span>
+                </div>
+                <div class="level-indicators">
+                    <div class="level-item" id="lvHealthy">
+                        <span class="level-dot green"></span>
+                        <div class="level-text">
+                            <span class="lt-line"><b>健康</b> <span class="lt-emoji">😄</span></span>
+                            <small>2000ml</small>
+                        </div>
+                    </div>
+                    <div class="level-item" id="lvNormal">
+                        <span class="level-dot blue"></span>
+                        <div class="level-text">
+                            <span class="lt-line"><b>正常</b> <span class="lt-emoji">🙂</span></span>
+                            <small>1600ml</small>
+                        </div>
+                    </div>
+                    <div class="level-item" id="lvSurvival">
+                        <span class="level-dot orange"></span>
+                        <div class="level-text">
+                            <span class="lt-line"><b>活着</b> <span class="lt-emoji">😩</span></span>
+                            <small>&lt; 1600ml</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Cups -->
+        <section class="section cups-section">
+            <h2 class="section-title">
+                记录饮水
+                <span class="section-hint">点击记录 · × 可撤销</span>
+            </h2>
+            <div class="cups-grid">
+                <div class="cup-card" data-amount="150">
+                    <div class="cup-icon">
+                        <div class="cup-body"><div class="cup-water" style="height:30%"></div></div>
+                        <div class="cup-handle"></div>
+                    </div>
+                    <span class="cup-label">150ml</span>
+                </div>
+                <div class="cup-card" data-amount="300">
+                    <div class="cup-icon">
+                        <div class="cup-body"><div class="cup-water" style="height:55%"></div></div>
+                        <div class="cup-handle"></div>
+                    </div>
+                    <span class="cup-label">300ml</span>
+                </div>
+                <div class="cup-card" data-amount="500">
+                    <div class="cup-icon">
+                        <div class="cup-body"><div class="cup-water" style="height:85%"></div></div>
+                        <div class="cup-handle"></div>
+                    </div>
+                    <span class="cup-label">500ml</span>
+                </div>
+                <div class="cup-card custom-cup" id="customCupBtn">
+                    <div class="cup-icon">
+                        <div class="cup-body custom"><span class="question-mark">?</span></div>
+                        <div class="cup-handle"></div>
+                    </div>
+                    <span class="cup-label">自定义</span>
+                </div>
+            </div>
+
+            <div class="today-records">
+                <div class="today-records-header">
+                    <span>今日记录</span>
+                    <span class="today-records-count" id="todayRecordsCount">0 条</span>
+                </div>
+                <div class="today-records-list" id="todayRecordsList">
+                    <div class="empty-records">还没有记录，先喝一杯吧 💧</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Calendar bar -->
+        <section class="section calendar-section">
+            <div class="calendar-bar" id="calendarBar">
+                <div class="calendar-bar-icon">📅</div>
+                <div class="calendar-bar-text">
+                    <span class="calendar-bar-title">饮水日历</span>
+                    <span class="calendar-bar-sub" id="calendarBarSub">点击查看记录</span>
+                </div>
+                <div class="calendar-bar-arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Custom Amount Modal -->
+    <div class="modal-overlay" id="customModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="customModalTitle">自定义饮水量</h3>
+                <button class="modal-close" id="customModalClose" aria-label="关闭">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="custom-input-group">
+                    <input type="number" class="custom-amount-input" id="customAmountInput" placeholder="输入饮水量" min="1" max="5000" inputmode="numeric">
+                    <span class="custom-unit">ml</span>
+                </div>
+                <div class="quick-amounts">
+                    <button class="quick-btn" data-val="100">100</button>
+                    <button class="quick-btn" data-val="200">200</button>
+                    <button class="quick-btn" data-val="250">250</button>
+                    <button class="quick-btn" data-val="350">350</button>
+                    <button class="quick-btn" data-val="400">400</button>
+                    <button class="quick-btn" data-val="600">600</button>
+                    <button class="quick-btn" data-val="750">750</button>
+                    <button class="quick-btn" data-val="1000">1000</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" id="customCancelBtn">取消</button>
+                <button class="btn btn-confirm" id="customConfirmBtn">确认添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Modal -->
+    <div class="modal-overlay" id="calendarModal">
+        <div class="modal calendar-modal">
+            <div class="modal-header">
+                <h3>饮水日历</h3>
+                <button class="modal-close" id="calendarModalClose" aria-label="关闭">&times;</button>
+            </div>
+            <div class="calendar-nav">
+                <button class="cal-nav-btn" id="calPrev" aria-label="上一月">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <span class="cal-nav-title" id="calNavTitle"></span>
+                <button class="cal-nav-btn" id="calNext" aria-label="下一月">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
+            <div class="calendar-weekdays">
+                <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="calendar-legend">
+                <div class="legend-item"><span class="legend-dot" style="background:#FF9500"></span>活着</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#007AFF"></span>正常</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#34C759"></span>健康</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#E5E5EA"></span>未记录</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Detail Modal -->
+    <div class="modal-overlay" id="dayModal">
+        <div class="modal day-modal">
+            <div class="modal-header">
+                <h3 id="dayModalTitle">某日饮水</h3>
+                <button class="modal-close" id="dayModalClose" aria-label="关闭">&times;</button>
+            </div>
+            <div class="day-summary">
+                <div class="day-summary-left">
+                    <div class="day-summary-emoji" id="daySummaryEmoji">😩</div>
+                </div>
+                <div class="day-summary-right">
+                    <div class="day-summary-ml">
+                        <span id="dayTotalMl">0</span><small>/ <span id="dayTargetMl">2000</span>ml</small>
+                    </div>
+                    <div class="day-summary-level" id="dayLevelText">—</div>
+                    <div class="day-progress-bar">
+                        <div class="day-progress-fill" id="dayProgressFill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="day-quick-add">
+                <button class="day-add-btn" data-amount="150">+150</button>
+                <button class="day-add-btn" data-amount="300">+300</button>
+                <button class="day-add-btn" data-amount="500">+500</button>
+                <button class="day-add-btn custom" id="dayCustomBtn">自定义</button>
+            </div>
+
+            <div class="day-records-title">
+                <span>记录</span>
+                <span class="day-records-count" id="dayRecordsCount">0 条</span>
+            </div>
+            <div class="day-records-list" id="dayRecordsList"></div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // ===== Constants =====
+    const DAILY_TARGET = 2000;
+    const LEVEL_SURVIVAL = 1200;
+    const LEVEL_NORMAL = DAILY_TARGET * 0.8;
+    const STORAGE_KEY = 'water_tracker_records_v2';
+    const STORAGE_KEY_V1 = 'water_tracker_records_v1';
+
+    // ===== State =====
+    let records = loadRecords();
+    let calView = { year: new Date().getFullYear(), month: new Date().getMonth() };
+    let dayView = null;
+    let customTarget = 'today';
+
+    // ===== Persistence =====
+    function loadRecords() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+            const oldRaw = localStorage.getItem(STORAGE_KEY_V1);
+            if (oldRaw) {
+                const old = JSON.parse(oldRaw);
+                const migrated = {};
+                Object.keys(old).forEach(k => {
+                    const total = old[k] || 0;
+                    if (total > 0) migrated[k] = [{ id: uid(), ml: total, time: '—', ts: 0 }];
+                });
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+                return migrated;
+            }
+            return {};
+        } catch { return {}; }
+    }
+    function saveRecords() { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
+    function uid() { return Math.random().toString(36).slice(2, 10) + Date.now().toString(36); }
+
+    // ===== Date helpers =====
+    function todayKey() { return dateToKey(new Date()); }
+    function dateToKey(d) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    function formatTime(d) {
+        return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    function formatKeyCN(key) {
+        const [y, m, d] = key.split('-').map(Number);
+        const date = new Date(y, m-1, d);
+        const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+        return `${m}月${d}日 ${weekdays[date.getDay()]}`;
+    }
+
+    // ===== Record ops =====
+    function totalOf(key) {
+        const list = records[key] || [];
+        return list.reduce((s, r) => s + (r.ml || 0), 0);
+    }
+    function addRecord(key, ml) {
+        if (!ml || ml <= 0) return;
+        if (!records[key]) records[key] = [];
+        const now = new Date();
+        records[key].push({ id: uid(), ml, time: formatTime(now), ts: now.getTime() });
+        saveRecords();
+    }
+    function removeRecord(key, id) {
+        if (!records[key]) return;
+        records[key] = records[key].filter(r => r.id !== id);
+        if (records[key].length === 0) delete records[key];
+        saveRecords();
+    }
+    function levelOf(ml) {
+        if (ml >= DAILY_TARGET) return 'healthy';
+        if (ml >= LEVEL_NORMAL) return 'normal';
+        return 'survival';
+    }
+    function emojiOf(ml) {
+        if (ml >= DAILY_TARGET) return '😄';
+        if (ml >= LEVEL_NORMAL) return '🙂';
+        return '😩';
+    }
+    function levelTextOf(ml) {
+        if (ml >= DAILY_TARGET) return '已达推荐量 · 健康 😄';
+        if (ml >= LEVEL_NORMAL) return `再喝 ${DAILY_TARGET - ml}ml 就达标 · 正常 🙂`;
+        if (ml >= LEVEL_SURVIVAL) return `距离推荐量还差 ${DAILY_TARGET - ml}ml · 活着 😩`;
+        return `已喝 ${ml}ml，建议尽快补水 · 活着 😩`;
+    }
+
+    // ===== UI today =====
+    function updateUI() {
+        const total = totalOf(todayKey());
+        document.getElementById('currentMl').textContent = total;
+        document.getElementById('targetMl').textContent = DAILY_TARGET;
+
+        const fill = document.getElementById('cylinderFill');
+        const pct = Math.min(100, (total / DAILY_TARGET) * 100);
+        fill.style.height = pct + '%';
+        const lvl = levelOf(total);
+        fill.classList.remove('level-survival','level-normal','level-healthy');
+        fill.classList.add('level-' + lvl);
+
+        document.getElementById('cylinderEmoji').textContent = emojiOf(total);
+
+        document.getElementById('lvHealthy').classList.toggle('active', lvl === 'healthy');
+        document.getElementById('lvNormal').classList.toggle('active', lvl === 'normal');
+        document.getElementById('lvSurvival').classList.toggle('active', lvl === 'survival');
+
+        const now = new Date();
+        const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+        document.getElementById('dateDisplay').textContent =
+            `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${weekdays[now.getDay()]}`;
+
+        document.getElementById('calendarBarSub').textContent =
+            `${total}ml / ${DAILY_TARGET}ml · ${levelTextOf(total).split('·').pop().trim()}`;
+
+        renderTodayRecords();
+    }
+
+    function renderTodayRecords() {
+        const list = (records[todayKey()] || []).slice().sort((a,b) => (b.ts||0) - (a.ts||0));
+        const wrap = document.getElementById('todayRecordsList');
+        document.getElementById('todayRecordsCount').textContent = `${list.length} 条 · ${totalOf(todayKey())}ml`;
+        if (list.length === 0) {
+            wrap.innerHTML = '<div class="empty-records">还没有记录，先喝一杯吧 💧</div>';
+            return;
+        }
+        wrap.innerHTML = list.map(r => `
+            <div class="record-chip" data-id="${r.id}">
+                <span class="chip-time">${r.time}</span>
+                <span>${r.ml}ml</span>
+                <button class="chip-del" aria-label="删除" data-id="${r.id}">&times;</button>
+            </div>
+        `).join('');
+        wrap.querySelectorAll('.chip-del').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                removeRecord(todayKey(), btn.dataset.id);
+                updateUI();
+                showToast('已撤销记录');
+            });
+        });
+    }
+
+    // ===== Toast =====
+    let toastTimer = null;
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+    }
+
+    // ===== Cups =====
+    document.querySelectorAll('.cup-card[data-amount]').forEach(card => {
+        card.addEventListener('click', () => {
+            const amount = parseInt(card.dataset.amount, 10);
+            card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse');
+            addRecord(todayKey(), amount);
+            updateUI();
+            showToast(`+${amount}ml  今日 ${totalOf(todayKey())}ml`);
+            if (navigator.vibrate) navigator.vibrate(15);
+        });
+    });
+
+    // ===== Custom modal =====
+    const customModal = document.getElementById('customModal');
+    const customInput = document.getElementById('customAmountInput');
+    const customModalTitle = document.getElementById('customModalTitle');
+
+    function openCustomModal(target) {
+        customTarget = target;
+        customModalTitle.textContent = target === 'today' ? '自定义饮水量' : `为 ${formatKeyCN(dayView)} 添加`;
+        customInput.value = '';
+        document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+        customModal.classList.add('show');
+        setTimeout(() => customInput.focus(), 180);
+    }
+    document.getElementById('customCupBtn').addEventListener('click', () => openCustomModal('today'));
+    document.getElementById('customModalClose').addEventListener('click', () => customModal.classList.remove('show'));
+    document.getElementById('customCancelBtn').addEventListener('click', () => customModal.classList.remove('show'));
+    customModal.addEventListener('click', e => { if (e.target === customModal) customModal.classList.remove('show'); });
+
+    document.querySelectorAll('.quick-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            customInput.value = btn.dataset.val;
+        });
+    });
+    document.getElementById('customConfirmBtn').addEventListener('click', () => {
+        const v = parseInt(customInput.value, 10);
+        if (!v || v <= 0) { showToast('请输入有效的饮水量'); return; }
+        if (v > 5000) { showToast('单次最多 5000ml'); return; }
+        const key = customTarget === 'today' ? todayKey() : dayView;
+        addRecord(key, v);
+        customModal.classList.remove('show');
+        if (customTarget === 'today') {
+            updateUI();
+            showToast(`+${v}ml  今日 ${totalOf(todayKey())}ml`);
+        } else {
+            renderDayModal(dayView);
+            renderCalendar();
+            if (dayView === todayKey()) updateUI();
+            showToast(`已添加 ${v}ml`);
+        }
+        if (navigator.vibrate) navigator.vibrate(15);
+    });
+    customInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('customConfirmBtn').click(); });
+
+    // ===== Calendar =====
+    const calendarModal = document.getElementById('calendarModal');
+    document.getElementById('calendarBar').addEventListener('click', () => {
+        const now = new Date();
+        calView = { year: now.getFullYear(), month: now.getMonth() };
+        renderCalendar();
+        calendarModal.classList.add('show');
+    });
+    document.getElementById('calendarModalClose').addEventListener('click', () => calendarModal.classList.remove('show'));
+    calendarModal.addEventListener('click', e => { if (e.target === calendarModal) calendarModal.classList.remove('show'); });
+
+    document.getElementById('calPrev').addEventListener('click', () => {
+        calView.month -= 1;
+        if (calView.month < 0) { calView.month = 11; calView.year -= 1; }
+        renderCalendar();
+    });
+    document.getElementById('calNext').addEventListener('click', () => {
+        calView.month += 1;
+        if (calView.month > 11) { calView.month = 0; calView.year += 1; }
+        renderCalendar();
+    });
+
+    function renderCalendar() {
+        const y = calView.year, m = calView.month;
+        document.getElementById('calNavTitle').textContent = `${y}年 ${m+1}月`;
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+
+        const firstDay = new Date(y, m, 1).getDay();
+        const daysInMonth = new Date(y, m+1, 0).getDate();
+        const todayK = todayKey();
+        const todayDate = new Date();
+
+        for (let i = 0; i < firstDay; i++) {
+            const empty = document.createElement('div');
+            empty.className = 'cal-day empty';
+            grid.appendChild(empty);
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+            const key = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            const ml = totalOf(key);
+            const cell = document.createElement('div');
+            cell.className = 'cal-day';
+            if (ml > 0) cell.classList.add('level-' + levelOf(ml));
+            if (key === todayK) cell.classList.add('today');
+            const cellDate = new Date(y, m, d);
+            const isFuture = cellDate > todayDate && key !== todayK;
+
+            cell.innerHTML = `
+                <span class="day-num">${d}</span>
+                <span class="day-sep"></span>
+                <span class="day-ml">${ml > 0 ? ml : '—'}</span>
+            `;
+            if (!isFuture) {
+                cell.addEventListener('click', () => openDayModal(key));
+            } else {
+                cell.style.opacity = '0.45';
+                cell.style.cursor = 'default';
+            }
+            grid.appendChild(cell);
+        }
+    }
+
+    // ===== Day modal =====
+    const dayModal = document.getElementById('dayModal');
+    document.getElementById('dayModalClose').addEventListener('click', () => dayModal.classList.remove('show'));
+    dayModal.addEventListener('click', e => { if (e.target === dayModal) dayModal.classList.remove('show'); });
+
+    function openDayModal(key) {
+        dayView = key;
+        renderDayModal(key);
+        dayModal.classList.add('show');
+    }
+    function renderDayModal(key) {
+        const list = (records[key] || []).slice().sort((a,b) => (b.ts||0) - (a.ts||0));
+        const total = totalOf(key);
+        const lvl = levelOf(total);
+
+        document.getElementById('dayModalTitle').textContent =
+            key === todayKey() ? `今天 · ${formatKeyCN(key)}` : formatKeyCN(key);
+        document.getElementById('dayTotalMl').textContent = total;
+        document.getElementById('dayTargetMl').textContent = DAILY_TARGET;
+        document.getElementById('daySummaryEmoji').textContent = emojiOf(total);
+        document.getElementById('dayLevelText').textContent = levelTextOf(total);
+
+        const fill = document.getElementById('dayProgressFill');
+        fill.style.width = Math.min(100, total / DAILY_TARGET * 100) + '%';
+        fill.classList.remove('level-survival','level-normal','level-healthy');
+        fill.classList.add('level-' + lvl);
+
+        document.getElementById('dayRecordsCount').textContent = `${list.length} 条`;
+
+        const listWrap = document.getElementById('dayRecordsList');
+        if (list.length === 0) {
+            listWrap.innerHTML = '<div class="empty-records">还没有记录，点上方按钮添加</div>';
+        } else {
+            listWrap.innerHTML = list.map(r => `
+                <div class="day-record-row">
+                    <div class="rec-icon">💧</div>
+                    <div class="rec-main">
+                        <span class="rec-ml">${r.ml} ml</span>
+                        <span class="rec-time">${r.time}</span>
+                    </div>
+                    <button class="rec-del" aria-label="删除" data-id="${r.id}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    </button>
+                </div>
+            `).join('');
+            listWrap.querySelectorAll('.rec-del').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    removeRecord(key, btn.dataset.id);
+                    renderDayModal(key);
+                    renderCalendar();
+                    if (key === todayKey()) updateUI();
+                    showToast('已删除记录');
+                    if (navigator.vibrate) navigator.vibrate(10);
+                });
+            });
+        }
+    }
+
+    document.querySelectorAll('.day-add-btn[data-amount]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!dayView) return;
+            const amount = parseInt(btn.dataset.amount, 10);
+            addRecord(dayView, amount);
+            renderDayModal(dayView);
+            renderCalendar();
+            if (dayView === todayKey()) updateUI();
+            showToast(`已添加 ${amount}ml`);
+            if (navigator.vibrate) navigator.vibrate(15);
+        });
+    });
+    document.getElementById('dayCustomBtn').addEventListener('click', () => openCustomModal('day'));
+
+    // ===== Init =====
+    updateUI();
+    </script>
+</body>
+</html>
