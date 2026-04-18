@@ -345,22 +345,32 @@
     .calendar-bar-arrow { opacity: 0.9; flex-shrink: 0; }
 
     /* ===== Modal ===== */
+    /* Single shared backdrop — one dim + blur layer for ALL modals.
+       Fades in when the first modal opens, stays completely static while any
+       modal is open (even across calendar→day→custom navigation), fades out
+       only when the last modal closes. Never flickers between layers. */
+    .modal-backdrop {
+        position: fixed; inset: 0;
+        background: rgba(20,30,50,0.45);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.22s ease;
+        z-index: 99;   /* just below all modal overlays */
+    }
+    .modal-backdrop.show { opacity: 1; }
+
+    /* Modal overlays themselves are now transparent — they only capture
+       click-outside-to-close for their specific modal. The dim+blur lives on
+       the single shared .modal-backdrop above. */
     .modal-overlay {
-        position: fixed; inset: 0; background: rgba(20,30,50,0.45);
+        position: fixed; inset: 0;
+        background: transparent;
         display: none; align-items: flex-end; justify-content: center;
         z-index: 100;
-        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-        animation: overlayIn 0.22s ease;
     }
     .modal-overlay.show { display: flex; }
-    /* When a newer modal is opened on top, older overlays drop their dim + blur so
-       the effect doesn't accumulate. Only the topmost overlay keeps the visual. */
-    .modal-overlay.behind {
-        background: transparent;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        animation: none;
-    }
     @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 
     .modal {
@@ -372,10 +382,9 @@
         animation: sheetIn 0.3s cubic-bezier(.2,.8,.2,1);
         /* Fixed height so all three modals (calendar / day / custom) share the same
            sheet outline. A later-opened modal perfectly covers the earlier one,
-           so the old modal never leaks out from behind. 580px fits the calendar
-           grid + legend + data-actions + iPhone safe-area padding comfortably. */
-        height: 580px;
-        max-height: 90vh;
+           so the old modal never leaks out from behind. */
+        height: 540px;
+        max-height: 86vh;
         display: flex; flex-direction: column;
         padding-bottom: env(safe-area-inset-bottom, 0px);
     }
@@ -493,30 +502,26 @@
 
     .calendar-legend {
         display: flex; justify-content: space-around; flex-wrap: wrap; gap: 6px;
-        padding: 10px 14px 10px; font-size: 11.5px; color: #3A3A3C;
-        margin-top: auto;   /* anchor legend (and the data actions below) to the bottom */
+        padding: 10px 14px 18px; font-size: 11.5px; color: #3A3A3C;
+        margin-top: auto;   /* anchor legend to the bottom of the fixed-height modal */
     }
 
-    /* Export / Import data buttons, sit below the legend inside the calendar modal */
-    .calendar-data-actions {
-        display: flex; gap: 8px;
-        padding: 8px 14px 14px;
-        border-top: 1px solid #F2F2F7;
+    /* Left-side group in the calendar modal header: title + inline action icons. */
+    .modal-title-group {
+        display: flex; align-items: center; gap: 8px;
+        min-width: 0;
     }
-    .data-btn {
-        flex: 1;
-        display: flex; align-items: center; justify-content: center; gap: 6px;
-        padding: 11px 8px;
+    .icon-btn {
+        width: 30px; height: 30px;
+        display: flex; align-items: center; justify-content: center;
         background: #F2F7FC;
-        border: 1px solid #E5EEF7;
-        border-radius: 12px;
-        font-size: 13px; font-weight: 700;
         color: #0A5FCC;
+        border: 0; border-radius: 9px;
         cursor: pointer;
         transition: transform 0.15s ease, background 0.15s ease;
     }
-    .data-btn:active { background: #E4EFFC; transform: scale(0.96); }
-    .data-btn svg { flex-shrink: 0; }
+    .icon-btn:active { background: #E4EFFC; transform: scale(0.9); }
+    .icon-btn svg { display: block; }
     .legend-item { display: flex; align-items: center; gap: 5px; font-weight: 600; }
     .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 
@@ -637,6 +642,11 @@
     </style>
 </head>
 <body>
+    <!-- Single shared modal backdrop. Fades in once any modal opens and stays
+         rock-steady across calendar ↔ day ↔ custom navigation. Each modal
+         overlay sits above this and is transparent itself. -->
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+
     <div class="bg-decor">
         <span class="bubble b1"></span>
         <span class="bubble b2"></span>
@@ -803,7 +813,16 @@
     <div class="modal-overlay" id="calendarModal">
         <div class="modal calendar-modal">
             <div class="modal-header">
-                <h3>饮水日历</h3>
+                <div class="modal-title-group">
+                    <h3>饮水日历</h3>
+                    <button class="icon-btn" id="exportDataBtn" aria-label="导出备份" title="导出备份">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    </button>
+                    <button class="icon-btn" id="importDataBtn" aria-label="导入恢复" title="导入恢复">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    </button>
+                    <input type="file" id="importFileInput" accept="application/json,.json" hidden>
+                </div>
                 <button class="modal-close" id="calendarModalClose" aria-label="关闭">&times;</button>
             </div>
             <div class="calendar-nav">
@@ -824,17 +843,6 @@
                 <div class="legend-item"><span class="legend-dot" style="background:#007AFF"></span>正常</div>
                 <div class="legend-item"><span class="legend-dot" style="background:#34C759"></span>健康</div>
                 <div class="legend-item"><span class="legend-dot" style="background:#E5E5EA"></span>未记录</div>
-            </div>
-            <div class="calendar-data-actions">
-                <button class="data-btn" id="exportDataBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                    导出备份
-                </button>
-                <button class="data-btn" id="importDataBtn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                    导入恢复
-                </button>
-                <input type="file" id="importFileInput" accept="application/json,.json" hidden>
             </div>
         </div>
     </div>
@@ -1028,19 +1036,17 @@
     // so a later-opened modal always sits on top. Paired with the fixed modal
     // height, the old modal is fully hidden behind the new one.
     //
-    // syncBackdrop() enforces a second rule: only the TOPMOST overlay keeps its
-    // dim + blur backdrop. Lower overlays get `.behind` which zeroes out their
-    // background so the blur/darken effect doesn't accumulate across layers.
+    // The dim + blur effect lives on a single shared #modalBackdrop element.
+    // syncBackdrop() toggles it based only on "is any modal open?" — so the
+    // backdrop fades in once when the first modal opens and out when the last
+    // one closes. Switching between modals (calendar → day → custom) doesn't
+    // touch it, so the blur never flickers.
     let modalStackZ = 100;
+    const modalBackdrop = document.getElementById('modalBackdrop');
 
     function syncBackdrop() {
-        const openOverlays = Array.from(document.querySelectorAll('.modal-overlay.show'));
-        if (openOverlays.length === 0) return;
-        let top = openOverlays[0];
-        for (const o of openOverlays) {
-            if ((parseInt(o.style.zIndex) || 0) > (parseInt(top.style.zIndex) || 0)) top = o;
-        }
-        openOverlays.forEach(o => o.classList.toggle('behind', o !== top));
+        const anyOpen = document.querySelector('.modal-overlay.show') !== null;
+        modalBackdrop.classList.toggle('show', anyOpen);
     }
 
     function openModal(modal) {
@@ -1051,7 +1057,6 @@
     }
     function closeModal(modal) {
         modal.classList.remove('show');
-        modal.classList.remove('behind');   // clear in case it's reopened later
         syncBackdrop();
     }
 
