@@ -105,14 +105,14 @@ body {
     font-size: 17px;
     line-height: 1.294;
     letter-spacing: -0.41px;
-    padding-bottom: calc(var(--sa-bot) + 8px);
-    overflow-x: hidden;
+    padding-bottom: var(--sa-bot);
+    overflow: hidden;
 }
 
 /* ============================================================
    NAVIGATION BAR + LARGE TITLE
    ============================================================ */
-.scroll-root { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.scroll-root { min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 0; }
 
 .navbar {
     position: sticky; top: 0; z-index: 20;
@@ -166,7 +166,7 @@ body {
 /* ============================================================
    RING HERO CARD
    ============================================================ */
-.content { padding: 0 16px; display: flex; flex-direction: column; gap: 20px; padding-top: 4px; padding-bottom: 20px; flex: 1; }
+.content { padding: 0 16px; display: flex; flex-direction: column; gap: 20px; padding-top: 4px; padding-bottom: 0; flex: 1; }
 .content > :last-child { margin-top: 40px; }
 
 .hero-card {
@@ -1617,6 +1617,60 @@ importFileInput.addEventListener('change', (e) => {
     if (file) importData(file);
     e.target.value = '';
 });
+
+// ============================================================
+// DRAG-TO-DISMISS SHEETS
+// ============================================================
+function attachDragDismiss(modal) {
+    const sheet = modal.querySelector('.sheet');
+    const body = sheet.querySelector('.sheet-body');
+    let startY = null, dy = 0, dragging = false, allowed = false;
+
+    sheet.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        startY = e.touches[0].clientY;
+        dy = 0;
+        dragging = true;
+        const fromHandle = !!e.target.closest('.sheet-head, .sheet-grabber');
+        allowed = fromHandle || body.scrollTop <= 0;
+        sheet.style.transition = 'none';
+    }, { passive: true });
+
+    sheet.addEventListener('touchmove', (e) => {
+        if (!dragging || startY === null) return;
+        const delta = e.touches[0].clientY - startY;
+        if (!allowed) {
+            if (body.scrollTop <= 0 && delta > 0) {
+                allowed = true;
+                startY = e.touches[0].clientY;
+            } else {
+                return;
+            }
+        }
+        if (delta <= 0) { dy = 0; sheet.style.transform = ''; return; }
+        dy = delta;
+        sheet.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+
+    sheet.addEventListener('touchend', () => {
+        if (!dragging) return;
+        dragging = false;
+        sheet.style.transition = 'transform 0.3s cubic-bezier(.2,.9,.25,1)';
+        if (dy > 120) {
+            sheet.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+                closeSheet(modal);
+                sheet.style.transition = '';
+                sheet.style.transform = '';
+            }, 280);
+        } else {
+            sheet.style.transform = '';
+        }
+        startY = null;
+        dy = 0;
+    });
+}
+[customModal, calendarModal, dayModal].forEach(attachDragDismiss);
 
 // ============================================================
 // INIT
