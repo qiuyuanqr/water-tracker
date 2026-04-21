@@ -1320,6 +1320,7 @@ window.addEventListener('scroll', () => {
 // ============================================================
 let modalStackZ = 100;
 const sheetBackdrop = document.getElementById('sheetBackdrop');
+const SHEET_EXIT_MS = 280;
 function syncBackdrop() {
     const anyOpen = document.querySelector('.sheet-overlay.show') !== null;
     sheetBackdrop.classList.toggle('show', anyOpen);
@@ -1330,13 +1331,27 @@ function openSheet(modal) {
     modal.classList.add('show');
     syncBackdrop();
 }
-function closeSheet(modal) {
+function hideSheetInstant(modal) {
     modal.classList.remove('show');
+    const sheet = modal.querySelector('.sheet');
+    sheet.style.transition = '';
+    sheet.style.transform = '';
     syncBackdrop();
 }
+function animateSheetOut(modal) {
+    if (!modal.classList.contains('show')) return;
+    const sheet = modal.querySelector('.sheet');
+    const lastOne = document.querySelectorAll('.sheet-overlay.show').length <= 1;
+    if (lastOne) sheetBackdrop.classList.remove('show');
+    sheet.style.transition = `transform ${SHEET_EXIT_MS}ms cubic-bezier(.32,.72,.3,1)`;
+    requestAnimationFrame(() => {
+        sheet.style.transform = 'translateY(100%)';
+    });
+    setTimeout(() => hideSheetInstant(modal), SHEET_EXIT_MS);
+}
+function closeSheet(modal) { animateSheetOut(modal); }
 function closeAllSheets() {
-    document.querySelectorAll('.sheet-overlay.show').forEach(m => m.classList.remove('show'));
-    syncBackdrop();
+    document.querySelectorAll('.sheet-overlay.show').forEach(m => animateSheetOut(m));
 }
 
 // ============================================================
@@ -1657,12 +1672,10 @@ function attachDragDismiss(modal) {
         dragging = false;
         sheet.style.transition = 'transform 0.3s cubic-bezier(.2,.9,.25,1)';
         if (dy > 120) {
+            const lastOne = document.querySelectorAll('.sheet-overlay.show').length <= 1;
+            if (lastOne) sheetBackdrop.classList.remove('show');
             sheet.style.transform = 'translateY(100%)';
-            setTimeout(() => {
-                closeSheet(modal);
-                sheet.style.transition = '';
-                sheet.style.transform = '';
-            }, 280);
+            setTimeout(() => hideSheetInstant(modal), 280);
         } else {
             sheet.style.transform = '';
         }
