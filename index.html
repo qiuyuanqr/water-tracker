@@ -632,13 +632,16 @@ body {
 /* ============================================================
    CALENDAR SHEET
    ============================================================ */
-.cal-nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 4px 2px 12px;
+.cal-month-nav {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px;
+    white-space: nowrap;
 }
-.cal-title {
+.cal-month-title {
     font-size: 17px; font-weight: 600;
     letter-spacing: -0.41px; color: var(--label);
+    font-feature-settings: "tnum" 1;
+    min-width: 88px; text-align: center;
 }
 .cal-nav-btn {
     width: 30px; height: 30px; border-radius: 50%;
@@ -667,7 +670,7 @@ body {
     padding: 8px;
 }
 .cal-day {
-    aspect-ratio: 1 / 1;
+    height: 48px;
     position: relative;
     border-radius: 10px;
     background: transparent;
@@ -694,7 +697,10 @@ body {
     letter-spacing: 0;
 }
 .cal-day .d-ring {
-    position: absolute; inset: 3px;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 42px; height: 42px;
     border: 2px solid transparent;
     border-radius: 50%;
     z-index: 0;
@@ -707,7 +713,9 @@ body {
 .cal-day.level-healthy  .d-ring { background: color-mix(in srgb, var(--lvl-healthy) 12%, transparent); }
 .cal-day.today .d-num { color: var(--blue); font-weight: 700; }
 .cal-day.today::after {
-    content: ""; position: absolute; top: 4px; right: 6px;
+    content: ""; position: absolute;
+    top: calc(50% - 22px);
+    left: calc(50% + 16px);
     width: 5px; height: 5px; border-radius: 50%;
     background: var(--blue);
     z-index: 2;
@@ -1061,21 +1069,20 @@ body {
                 </button>
                 <input type="file" id="importFile" accept="application/json,.json" hidden="">
             </div>
-            <div class="sheet-title">饮水日历</div>
+            <div class="cal-month-nav">
+                <button class="cal-nav-btn" id="calPrev" aria-label="上一月">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+                </button>
+                <span class="cal-month-title" id="calTitle">—</span>
+                <button class="cal-nav-btn" id="calNext" aria-label="下一月">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+                </button>
+            </div>
             <div class="right">
                 <button class="sheet-btn-link" id="calClose">完成</button>
             </div>
         </div>
         <div class="sheet-body">
-            <div class="cal-nav">
-                <button class="cal-nav-btn" id="calPrev" aria-label="上一月">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
-                </button>
-                <span class="cal-title" id="calTitle">—</span>
-                <button class="cal-nav-btn" id="calNext" aria-label="下一月">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
-                </button>
-            </div>
             <div class="cal-weekdays">
                 <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
             </div>
