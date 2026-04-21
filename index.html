@@ -110,7 +110,7 @@ body {
 /* ============================================================
    NAVIGATION BAR + LARGE TITLE
    ============================================================ */
-.scroll-root { min-height: 100vh; }
+.scroll-root { min-height: 100vh; display: flex; flex-direction: column; }
 
 .navbar {
     position: sticky; top: 0; z-index: 20;
@@ -164,7 +164,8 @@ body {
 /* ============================================================
    RING HERO CARD
    ============================================================ */
-.content { padding: 0 16px; display: flex; flex-direction: column; gap: 20px; padding-top: 4px; padding-bottom: 20px; }
+.content { padding: 0 16px; display: flex; flex-direction: column; gap: 20px; padding-top: 4px; padding-bottom: 28px; flex: 1; }
+.content > :last-child { margin-top: auto; }
 
 .hero-card {
     background: var(--bg-elev);
@@ -349,6 +350,25 @@ body {
     border-radius: var(--radius-card);
     overflow: hidden;
 }
+#listCard {
+    height: 252px;
+    display: flex;
+    flex-direction: column;
+}
+#listCard #listRows {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+#listCard #listEmpty {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+#listCard #listEmpty .list-empty-drop { margin-bottom: 8px; }
 .list-row {
     display: grid;
     grid-template-columns: 36px 1fr auto auto;
@@ -478,7 +498,8 @@ body {
     background: var(--bg);
     border-radius: 10px 10px 0 0;
     width: 100%; max-width: 540px;
-    max-height: 92vh;
+    height: 540px;
+    max-height: calc(100vh - 40px);
     display: flex; flex-direction: column;
     padding-bottom: var(--sa-bot);
     animation: sheetIn 0.32s cubic-bezier(.2,.9,.25,1);
@@ -847,19 +868,7 @@ body {
 
     <!-- Sticky nav bar (shows inline title on scroll) -->
     <div class="navbar" id="navbar">
-        <button class="nav-btn" id="navArchiveBtn" aria-label="历史">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="3"></rect><path d="M16 2v4M8 2v4M3 10h18"></path>
-            </svg>
-        </button>
         <div class="navbar-inline-title">今日饮水</div>
-        <button class="nav-btn" id="navSettingsBtn" aria-label="更多">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
-                <circle cx="5" cy="12" r="1.5" fill="currentColor"></circle>
-                <circle cx="19" cy="12" r="1.5" fill="currentColor"></circle>
-            </svg>
-        </button>
     </div>
 
     <!-- Large iOS title -->
@@ -1368,7 +1377,7 @@ function openCustomModal(target) {
     setTimeout(() => amtInput.focus(), 200);
 }
 document.getElementById('customBtn').addEventListener('click', () => openCustomModal('today'));
-document.getElementById('customCancel').addEventListener('click', () => closeSheet(customModal));
+document.getElementById('customCancel').addEventListener('click', () => { amtInput.blur(); closeSheet(customModal); });
 customModal.addEventListener('click', e => { if (e.target === customModal) closeAllSheets(); });
 
 document.querySelectorAll('.amt-q').forEach(btn => {
@@ -1384,6 +1393,7 @@ document.getElementById('customConfirm').addEventListener('click', () => {
     if (v > 5000) { showToast('单次最多 5000 毫升'); return; }
     const key = customTarget === 'today' ? todayKey() : dayView;
     addRecord(key, v);
+    amtInput.blur();
     closeSheet(customModal);
     if (customTarget === 'today') {
         updateUI();
@@ -1409,7 +1419,6 @@ function openCalendar() {
     openSheet(calendarModal);
 }
 document.getElementById('archiveBtn').addEventListener('click', openCalendar);
-document.getElementById('navArchiveBtn').addEventListener('click', openCalendar);
 document.getElementById('calClose').addEventListener('click', () => closeSheet(calendarModal));
 calendarModal.addEventListener('click', e => { if (e.target === calendarModal) closeAllSheets(); });
 
@@ -1606,11 +1615,6 @@ importFileInput.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     if (file) importData(file);
     e.target.value = '';
-});
-
-// Settings btn (placeholder for now — opens calendar too)
-document.getElementById('navSettingsBtn').addEventListener('click', () => {
-    showToast('更多设置即将上线');
 });
 
 // ============================================================
