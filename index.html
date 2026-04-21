@@ -353,7 +353,7 @@ body {
     overflow: hidden;
 }
 #listCard {
-    height: 252px;
+    height: 188px;
     display: flex;
     flex-direction: column;
 }
@@ -373,32 +373,32 @@ body {
 #listCard #listEmpty .list-empty-drop { margin-bottom: 8px; }
 .list-row {
     display: grid;
-    grid-template-columns: 36px 1fr auto auto;
+    grid-template-columns: 28px 1fr auto auto;
     align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    min-height: 52px;
+    gap: 10px;
+    padding: 8px 16px;
+    min-height: 44px;
     position: relative;
     background: var(--bg-elev);
 }
 .list-row + .list-row::before {
-    content: ""; position: absolute; left: 64px; right: 0; top: 0;
+    content: ""; position: absolute; left: 54px; right: 0; top: 0;
     height: 0.5px; background: var(--separator);
 }
 .list-row .drop {
-    width: 32px; height: 32px; border-radius: 50%;
+    width: 26px; height: 26px; border-radius: 50%;
     background: color-mix(in srgb, var(--water) 18%, transparent);
     color: var(--water-deep);
     display: flex; align-items: center; justify-content: center;
 }
-.list-row .main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.list-row .drop svg { width: 14px; height: 14px; }
 .list-row .ml {
-    font-size: 17px; font-weight: 600; color: var(--label);
-    letter-spacing: -0.41px;
+    font-size: 16px; font-weight: 600; color: var(--label);
+    letter-spacing: -0.32px;
     font-feature-settings: "tnum" 1;
 }
 .list-row .ml em {
-    font-style: normal; font-size: 13px; font-weight: 400;
+    font-style: normal; font-size: 12px; font-weight: 400;
     color: var(--label-sec); margin-left: 2px;
     letter-spacing: -0.08px;
 }
@@ -406,6 +406,7 @@ body {
     font-size: 13px; color: var(--label-sec);
     letter-spacing: -0.08px;
     font-feature-settings: "tnum" 1;
+    margin-right: 4px;
 }
 .list-row .x {
     width: 28px; height: 28px; border-radius: 50%;
@@ -1287,15 +1288,12 @@ function renderList() {
     wrap.innerHTML = list.map(r => `
         <div class="list-row" data-id="${r.id}">
             <div class="drop">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <svg viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 3s-6 7-6 11a6 6 0 0012 0c0-4-6-11-6-11z"/>
                 </svg>
             </div>
-            <div class="main">
-                <span class="ml">${r.ml}<em>毫升</em></span>
-                <span class="t">${r.time}</span>
-            </div>
-            <div></div>
+            <span class="ml">${r.ml}<em>毫升</em></span>
+            <span class="t">${r.time}</span>
             <button class="x" data-id="${r.id}" aria-label="撤销">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M6 18L18 6"/></svg>
             </button>
@@ -1531,15 +1529,12 @@ function renderDayModal(key) {
         rows.innerHTML = list.map(r => `
             <div class="list-row" data-id="${r.id}">
                 <div class="drop">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 3s-6 7-6 11a6 6 0 0012 0c0-4-6-11-6-11z"/>
                     </svg>
                 </div>
-                <div class="main">
-                    <span class="ml">${r.ml}<em>毫升</em></span>
-                    <span class="t">${r.time}</span>
-                </div>
-                <div></div>
+                <span class="ml">${r.ml}<em>毫升</em></span>
+                <span class="t">${r.time}</span>
                 <button class="x" data-id="${r.id}" aria-label="删除">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M6 18L18 6"/></svg>
                 </button>
