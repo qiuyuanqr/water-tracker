@@ -121,6 +121,7 @@ body {
     background: transparent;
     transition: background 0.2s, backdrop-filter 0.2s, border-color 0.2s;
     border-bottom: 0.5px solid transparent;
+    transform: translateZ(0);
 }
 .navbar.scrolled {
     background: color-mix(in srgb, var(--bg) 78%, transparent);
@@ -483,10 +484,12 @@ body {
    ============================================================ */
 .sheet-backdrop {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.28);
+    background: rgba(0,0,0,0.4);
     opacity: 0; pointer-events: none;
-    transition: opacity 0.25s ease;
+    transition: opacity 0.34s cubic-bezier(.32,.72,.3,1);
     z-index: 99;
+    transform: translateZ(0);
+    will-change: opacity;
 }
 .sheet-backdrop.show { opacity: 1; }
 
@@ -505,14 +508,15 @@ body {
     max-height: calc(100vh - 40px);
     display: flex; flex-direction: column;
     padding-bottom: var(--sa-bot);
-    animation: sheetIn 0.32s cubic-bezier(.2,.9,.25,1);
+    animation: sheetIn 0.34s cubic-bezier(.32,.72,.3,1);
+    will-change: transform;
     overflow: hidden;
     position: relative;
     box-shadow: 0 -8px 32px rgba(0,0,0,0.14);
 }
 @keyframes sheetIn {
-    from { opacity: 0; transform: translateY(36px); }
-    to { opacity: 1; transform: none; }
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
 }
 
 .sheet-grabber {
@@ -585,9 +589,29 @@ body {
     text-align: center;
     font-feature-settings: "tnum" 1;
     -moz-appearance: textfield;
-    padding: 0; min-width: 40px;
-    max-width: 80%;
+    padding: 0; min-width: 220px;
+    max-width: 100%;
+    transition: color 0.15s ease;
 }
+.amt-input.error { color: var(--red); }
+.amt-input.shake { animation: amtShake 0.4s cubic-bezier(.36,.07,.19,.97); }
+@keyframes amtShake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-5px); }
+    40%, 60% { transform: translateX(5px); }
+}
+.amt-hint {
+    display: none;
+    text-align: center;
+    color: var(--red);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: -0.08px;
+    margin-top: -10px;
+    padding-bottom: 8px;
+}
+.amt-hint.show { display: block; }
 .amt-input::-webkit-outer-spin-button,
 .amt-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .amt-unit {
@@ -1036,6 +1060,7 @@ body {
                     <input type="number" class="amt-input" id="amtInput" placeholder="0" min="1" max="5000" inputmode="numeric">
                     <span class="amt-unit">毫升</span>
                 </div>
+                <div class="amt-hint" id="amtHint">单次最多输入 5,000 毫升</div>
                 <div class="amt-quick">
                     <button class="amt-q" data-val="100">100</button>
                     <button class="amt-q" data-val="200">200</button>
@@ -1385,13 +1410,34 @@ document.querySelectorAll('.tile[data-amount]').forEach(card => {
 // ============================================================
 const customModal = document.getElementById('customModal');
 const amtInput = document.getElementById('amtInput');
+const amtHint = document.getElementById('amtHint');
+const customConfirmBtn = document.getElementById('customConfirm');
 const customModalTitle = document.getElementById('customModalTitle');
+
+function updateAmtState(allowShake) {
+    const v = parseInt(amtInput.value, 10) || 0;
+    const over = v > 5000;
+    amtInput.classList.toggle('error', over);
+    amtHint.classList.toggle('show', over);
+    customConfirmBtn.disabled = over;
+    amtInput.classList.remove('shake');
+    if (over && allowShake) {
+        void amtInput.offsetWidth;
+        amtInput.classList.add('shake');
+        if (navigator.vibrate) navigator.vibrate(12);
+    }
+}
+amtInput.addEventListener('input', () => {
+    if (amtInput.value.length > 5) amtInput.value = amtInput.value.slice(0, 5);
+    updateAmtState(true);
+});
 
 function openCustomModal(target) {
     customTarget = target;
     customModalTitle.textContent = target === 'today' ? '自定义饮水量' : `为 ${formatKeyCN(dayView)} 添加`;
     amtInput.value = '';
     document.querySelectorAll('.amt-q').forEach(b => b.classList.remove('active'));
+    updateAmtState(false);
     openSheet(customModal);
     setTimeout(() => amtInput.focus(), 200);
 }
@@ -1404,6 +1450,7 @@ document.querySelectorAll('.amt-q').forEach(btn => {
         document.querySelectorAll('.amt-q').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         amtInput.value = btn.dataset.val;
+        updateAmtState(false);
     });
 });
 document.getElementById('customConfirm').addEventListener('click', () => {
