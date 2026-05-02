@@ -1,0 +1,2 @@
+- [water-tracker URLs](water_tracker_urls.md) — live site + repo pointers for the iPhone water tracker project
+- [water-tracker scope](water_tracker_scope.md) — ongoing personal project, not a one-off; iPhone Safari is the only target
